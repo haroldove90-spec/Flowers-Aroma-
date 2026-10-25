@@ -1,0 +1,6 @@
+{
+  "name": "Invernadero Aroma Flowers",
+  "description": "Software de gestión integral para invernaderos y floricultura: producción, fertirrigación, sanidad vegetal, poscosecha, finanzas y administración.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

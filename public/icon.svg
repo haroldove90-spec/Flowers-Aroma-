@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f291e" />
+      <stop offset="100%" stop-color="#051710" />
+    </linearGradient>
+    <linearGradient id="stemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="roseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <linearGradient id="archGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#16a34a" stop-opacity="0.3" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Greenhouse Arch Framework -->
+  <path d="M 106 420 L 106 250 A 150 150 0 0 1 406 250 L 406 420" fill="none" stroke="url(#archGrad)" stroke-width="12" stroke-linecap="round" />
+  <path d="M 160 420 L 160 250 A 96 96 0 0 1 352 250 L 352 420" fill="none" stroke="#22c55e" stroke-width="5" stroke-opacity="0.4" stroke-dasharray="10 8" />
+  <line x1="256" y1="100" x2="256" y2="420" stroke="#4ade80" stroke-width="4" stroke-opacity="0.4" />
+  <line x1="106" y1="280" x2="406" y2="280" stroke="#4ade80" stroke-width="4" stroke-opacity="0.3" />
+  <line x1="106" y1="350" x2="406" y2="350" stroke="#4ade80" stroke-width="4" stroke-opacity="0.3" />
+
+  <!-- Base ground line -->
+  <line x1="80" y1="420" x2="432" y2="420" stroke="#16a34a" stroke-width="10" stroke-linecap="round" />
+
+  <!-- Stem & Leaves -->
+  <path d="M 256 420 Q 252 320 256 220" fill="none" stroke="url(#stemGrad)" stroke-width="14" stroke-linecap="round" />
+  <!-- Left Leaf -->
+  <path d="M 254 340 C 200 330 160 280 170 260 C 200 270 235 300 254 320 Z" fill="#16a34a" stroke="#22c55e" stroke-width="3" />
+  <!-- Right Leaf -->
+  <path d="M 258 310 C 310 295 345 250 340 230 C 310 240 275 275 258 290 Z" fill="#22c55e" stroke="#86efac" stroke-width="3" />
+
+  <!-- Premium Blooming Rose Head -->
+  <!-- Outer Petals -->
+  <path d="M 256 120 C 210 120 180 155 186 195 C 192 230 220 255 256 255 C 292 255 320 230 326 195 C 332 155 302 120 256 120 Z" fill="url(#roseGrad)" filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.4))" />
+  <!-- Layer 2 Petals -->
+  <path d="M 220 160 C 200 185 210 225 240 235 C 275 245 310 215 305 180 C 300 150 250 140 220 160 Z" fill="#dc2626" />
+  <!-- Layer 3 Spiral Heart -->
+  <path d="M 240 170 C 230 185 240 205 256 205 C 270 205 280 192 275 180 C 270 168 250 160 240 170 Z" fill="#b91c1c" />
+  <circle cx="256" cy="188" r="8" fill="#fef08a" opacity="0.9" />
+
+  <!-- Dew drop accent -->
+  <circle cx="285" cy="165" r="5" fill="#ffffff" opacity="0.8" />
+  <circle cx="287" cy="163" r="2" fill="#ffffff" />
+</svg>
