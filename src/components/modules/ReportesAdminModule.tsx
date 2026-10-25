@@ -13,8 +13,13 @@ import {
   Activity,
   CheckCircle2,
   AlertTriangle,
-  Code
+  Code,
+  FileDown,
+  Eye,
+  X
 } from 'lucide-react';
+import { exportRecordToPDF, exportModuleTableToPDF } from '../../utils/pdfExport';
+import { AuditLog } from '../../types';
 
 export const ReportesAdminModule: React.FC = () => {
   const {
@@ -42,6 +47,7 @@ export const ReportesAdminModule: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showSqlSchema, setShowSqlSchema] = useState(false);
   const [isPurgingSupabase, setIsPurgingSupabase] = useState(false);
+  const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
 
   // Supabase Form state
   const [sbUrl, setSbUrl] = useState(supabaseConfig.supabaseUrl);
@@ -122,6 +128,37 @@ export const ReportesAdminModule: React.FC = () => {
     showToast('Reporte en formato CSV generado', 'success');
   };
 
+  const handleExportAuditPDF = () => {
+    exportModuleTableToPDF(
+      '12. REPORTES, SEGURIDAD Y ADMINISTRACIÓN',
+      'Bitácora Completa de Auditoría y Eventos del Sistema',
+      ['Fecha y Hora', 'Usuario / Rol', 'Módulo', 'Acción', 'Detalle'],
+      auditLogs.map((l) => [l.timestamp, l.usuario, l.modulo, l.accion, l.detalle])
+    );
+    showToast('Bitácora de auditoría exportada en PDF', 'success');
+  };
+
+  const handleExportExecutiveSummaryPDF = () => {
+    const totalVentas = salesRecords.filter((s) => !s.desactivado).reduce((acc, s) => acc + s.totalVenta, 0);
+    const totalTallosCosechados = harvestRecords.filter((h) => !h.desactivado).reduce((acc, h) => acc + h.tallosCortados, 0);
+    const inventarioVal = warehouseItems.reduce((acc, i) => acc + (i.stockActual * i.costoUnitario), 0);
+    const activosVal = assetRecords.reduce((acc, a) => acc + (a.valorAdquisicion || 0), 0);
+
+    exportRecordToPDF('12. REPORTES, SEGURIDAD Y ADMINISTRACIÓN', 'Resumen Ejecutivo Consolidado Finca', [
+      { label: 'Unidades de Producción Activas', value: `${productionUnits.filter((u) => !u.desactivado).length} de ${productionUnits.length}` },
+      { label: 'Superficie Bajo Cubierta', value: `${productionUnits.reduce((acc, u) => acc + u.superficieM2, 0).toLocaleString()} m²` },
+      { label: 'Total Plantas en Cultivo', value: `${productionUnits.reduce((acc, u) => acc + u.numPlantas, 0).toLocaleString()} plantas` },
+      { label: 'Plantilla de Personal Activa', value: `${employees.filter((e) => !e.desactivado).length} trabajadores` },
+      { label: 'Tallos Cosechados Registrados', value: `${totalTallosCosechados.toLocaleString()} tallos` },
+      { label: 'Facturación Total Acumulada', value: `$${totalVentas.toLocaleString()} MXN` },
+      { label: 'Valor en Inventario de Insumos', value: `$${inventarioVal.toLocaleString()} MXN` },
+      { label: 'Valor Infraestructura y Activos', value: `$${activosVal.toLocaleString()} MXN` },
+      { label: 'Eventos de Auditoría Registrados', value: `${auditLogs.length} eventos` },
+      { label: 'Integración Supabase', value: supabaseConfig.configured ? 'Configurada y Vinculada' : 'No Conectada (Local)' }
+    ]);
+    showToast('Resumen ejecutivo exportado en PDF', 'success');
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -135,10 +172,17 @@ export const ReportesAdminModule: React.FC = () => {
             <span className="text-emerald-700">12.</span> REPORTES, SEGURIDAD Y ADMINISTRACIÓN
           </h2>
           <p className="text-xs text-stone-500 mt-1">
-            Panel ejecutivo para dirección general, auditoría, respaldos, exportación CSV/impresión y conexión con Supabase.
+            Panel ejecutivo para dirección general, auditoría, respaldos, exportación PDF/CSV y conexión con Supabase.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportExecutiveSummaryPDF}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-lg shadow-sm transition"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Resumen Ejecutivo PDF</span>
+          </button>
           <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-lg border border-stone-300 transition"
@@ -151,7 +195,7 @@ export const ReportesAdminModule: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-lg border border-stone-300 transition"
           >
             <Printer className="w-4 h-4 text-stone-700" />
-            <span>Imprimir / PDF</span>
+            <span>Imprimir Vista</span>
           </button>
         </div>
       </div>
@@ -171,7 +215,7 @@ export const ReportesAdminModule: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {isSampleDataHidden ? (
               <button
                 onClick={restoreSampleData}
@@ -200,7 +244,7 @@ export const ReportesAdminModule: React.FC = () => {
         </div>
 
         {/* Current State Indicator */}
-        <div className="p-3.5 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-between">
+        <div className="p-3.5 rounded-lg bg-stone-50 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span
               className={`w-3 h-3 rounded-full ${
@@ -212,7 +256,7 @@ export const ReportesAdminModule: React.FC = () => {
             </span>
           </div>
           <span className="text-[11px] text-stone-500 font-medium">
-            Preferencia guardada en: localStorage
+            Preferencia guardada en: localStorage (Persistente)
           </span>
         </div>
 
@@ -334,12 +378,19 @@ CREATE TABLE IF NOT EXISTS aroma_ventas_clientes (
 
       {/* System Audit Log */}
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-2xs">
-        <div className="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-emerald-700" />
             <h3 className="text-sm font-bold text-stone-900">Bitácora de Cambios y Auditoría del Sistema</h3>
+            <span className="text-xs text-stone-500 font-medium">({auditLogs.length} eventos auditados)</span>
           </div>
-          <span className="text-xs text-stone-500 font-medium">{auditLogs.length} eventos auditados</span>
+          <button
+            onClick={handleExportAuditPDF}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-stone-800 bg-stone-100 hover:bg-stone-200 rounded-lg border border-stone-300 transition"
+          >
+            <FileDown className="w-4 h-4 text-emerald-700" />
+            <span>Exportar Auditoría PDF</span>
+          </button>
         </div>
 
         {auditLogs.length === 0 ? (
@@ -356,6 +407,7 @@ CREATE TABLE IF NOT EXISTS aroma_ventas_clientes (
                   <th className="py-2.5 px-4">Módulo</th>
                   <th className="py-2.5 px-4">Acción</th>
                   <th className="py-2.5 px-4">Detalle de la Operación</th>
+                  <th className="py-2.5 px-4 text-center">Ver</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -377,6 +429,8 @@ CREATE TABLE IF NOT EXISTS aroma_ventas_clientes (
                             ? 'bg-emerald-100 text-emerald-800'
                             : log.accion === 'Eliminación' || log.accion === 'Vaciado de prueba'
                             ? 'bg-red-100 text-red-800'
+                            : log.accion === 'Desactivación'
+                            ? 'bg-amber-100 text-amber-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
@@ -386,6 +440,15 @@ CREATE TABLE IF NOT EXISTS aroma_ventas_clientes (
                     <td className="py-2.5 px-4 text-stone-800 text-[11px]">
                       {log.detalle}
                     </td>
+                    <td className="py-2.5 px-4 text-center">
+                      <button
+                        onClick={() => setViewingLog(log)}
+                        className="p-1 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded"
+                        title="Ver detalle de auditoría"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -393,6 +456,57 @@ CREATE TABLE IF NOT EXISTS aroma_ventas_clientes (
           </div>
         )}
       </div>
+
+      {/* Modal: Ver Detalle Auditoría */}
+      {viewingLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl border border-stone-200 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-stone-50">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-700" />
+                <h3 className="text-sm font-bold text-stone-900">Registro de Auditoría</h3>
+              </div>
+              <button onClick={() => setViewingLog(null)} className="p-1 text-stone-400 hover:text-stone-700 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 text-xs">
+              <div>
+                <span className="text-stone-500 font-bold block">Timestamp</span>
+                <span className="font-mono text-stone-800">{viewingLog.timestamp}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-stone-500 font-bold block">Usuario / Rol</span>
+                  <span className="font-bold text-stone-900">{viewingLog.usuario}</span>
+                </div>
+                <div>
+                  <span className="text-stone-500 font-bold block">Acción</span>
+                  <span className="font-bold text-stone-900">{viewingLog.accion}</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-stone-500 font-bold block">Módulo</span>
+                <span className="font-bold text-emerald-800">{viewingLog.modulo}</span>
+              </div>
+              <div>
+                <span className="text-stone-500 font-bold block">Detalle Completo</span>
+                <p className="mt-1 p-2.5 bg-stone-50 rounded-lg border border-stone-200 text-stone-800 font-medium">
+                  {viewingLog.detalle}
+                </p>
+              </div>
+              <div className="pt-3 border-t border-stone-200 flex justify-end">
+                <button
+                  onClick={() => setViewingLog(null)}
+                  className="px-4 py-1.5 bg-stone-800 hover:bg-stone-900 text-white rounded-lg font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal to Clear Sample Data */}
       {showClearConfirm && (

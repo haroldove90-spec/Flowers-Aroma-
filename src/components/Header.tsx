@@ -8,6 +8,7 @@ import {
   Trash2,
   RotateCcw,
   Menu,
+  X,
   Shield,
   AlertTriangle
 } from 'lucide-react';
@@ -17,7 +18,7 @@ interface HeaderProps {
   isSidebarOpen: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const {
     activeRole,
     setActiveRole,
@@ -37,10 +38,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleSidebar}
-            className="p-2 -ml-1 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition"
-            aria-label="Abrir menú de módulos"
+            className={`p-2 -ml-1 rounded-lg transition-colors border ${
+              isSidebarOpen
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                : 'text-stone-700 border-stone-200/80 hover:bg-stone-100 hover:text-stone-900'
+            }`}
+            aria-label={isSidebarOpen ? 'Cerrar menú de módulos' : 'Abrir menú de módulos'}
+            title={isSidebarOpen ? 'Cerrar menú lateral' : 'Abrir menú lateral'}
           >
-            <Menu className="w-5 h-5" />
+            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           <button

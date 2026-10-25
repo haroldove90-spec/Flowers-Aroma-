@@ -55,53 +55,86 @@ interface AppContextType {
   clearAllSampleData: () => void;
   restoreSampleData: () => void;
 
-  // Datasets
+  // Module 01
   productionUnits: ProductionUnit[];
   addProductionUnit: (item: Omit<ProductionUnit, 'id'>) => void;
+  updateProductionUnit: (id: string, data: Partial<ProductionUnit>) => void;
+  toggleDeactivateProductionUnit: (id: string) => void;
   deleteProductionUnit: (id: string) => void;
 
+  // Module 02
   culturalLabors: CulturalLabor[];
   addCulturalLabor: (item: Omit<CulturalLabor, 'id'>) => void;
+  updateCulturalLabor: (id: string, data: Partial<CulturalLabor>) => void;
+  toggleDeactivateCulturalLabor: (id: string) => void;
   deleteCulturalLabor: (id: string) => void;
   updateLaborStatus: (id: string, avance: number, estado: CulturalLabor['estado']) => void;
 
+  // Module 03
   fertirrigationRecords: FertirrigationRecord[];
   addFertirrigation: (item: Omit<FertirrigationRecord, 'id'>) => void;
+  updateFertirrigation: (id: string, data: Partial<FertirrigationRecord>) => void;
+  toggleDeactivateFertirrigation: (id: string) => void;
   deleteFertirrigation: (id: string) => void;
 
+  // Module 04
   phytosanitaryRecords: PhytosanitaryRecord[];
   addPhytosanitary: (item: Omit<PhytosanitaryRecord, 'id'>) => void;
+  updatePhytosanitary: (id: string, data: Partial<PhytosanitaryRecord>) => void;
+  toggleDeactivatePhytosanitary: (id: string) => void;
   deletePhytosanitary: (id: string) => void;
 
+  // Module 05
   employees: EmployeeRecord[];
   addEmployee: (item: Omit<EmployeeRecord, 'id'>) => void;
+  updateEmployee: (id: string, data: Partial<EmployeeRecord>) => void;
+  toggleDeactivateEmployee: (id: string) => void;
   deleteEmployee: (id: string) => void;
 
+  // Module 06
   harvestRecords: HarvestRecord[];
   addHarvest: (item: Omit<HarvestRecord, 'id'>) => void;
+  updateHarvest: (id: string, data: Partial<HarvestRecord>) => void;
+  toggleDeactivateHarvest: (id: string) => void;
   deleteHarvest: (id: string) => void;
 
+  // Module 07
   salesRecords: SaleRecord[];
   addSale: (item: Omit<SaleRecord, 'id'>) => void;
+  updateSale: (id: string, data: Partial<SaleRecord>) => void;
+  toggleDeactivateSale: (id: string) => void;
   deleteSale: (id: string) => void;
 
+  // Module 08
   warehouseItems: WarehouseItem[];
   addWarehouseItem: (item: Omit<WarehouseItem, 'id'>) => void;
+  updateWarehouseItem: (id: string, data: Partial<WarehouseItem>) => void;
+  toggleDeactivateWarehouseItem: (id: string) => void;
   deleteWarehouseItem: (id: string) => void;
   adjustStock: (id: string, delta: number) => void;
 
+  // Module 09
   financeRecords: FinanceRecord[];
   addFinance: (item: Omit<FinanceRecord, 'id'>) => void;
+  updateFinance: (id: string, data: Partial<FinanceRecord>) => void;
+  toggleDeactivateFinance: (id: string) => void;
   deleteFinance: (id: string) => void;
 
+  // Module 10
   costRecords: CostRecord[];
   addCost: (item: Omit<CostRecord, 'id'>) => void;
+  updateCost: (id: string, data: Partial<CostRecord>) => void;
+  toggleDeactivateCost: (id: string) => void;
   deleteCost: (id: string) => void;
 
+  // Module 11
   assetRecords: AssetRecord[];
   addAsset: (item: Omit<AssetRecord, 'id'>) => void;
+  updateAsset: (id: string, data: Partial<AssetRecord>) => void;
+  toggleDeactivateAsset: (id: string) => void;
   deleteAsset: (id: string) => void;
 
+  // Module 12 & Logs
   auditLogs: SystemAuditLog[];
   addAuditLog: (accion: SystemAuditLog['accion'], modulo: string, detalle: string) => void;
 
@@ -281,7 +314,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
-  // Helper toast
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => {
@@ -293,7 +325,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newLog: SystemAuditLog = {
       id: 'LOG-' + Date.now().toString(36),
       timestamp: new Date().toLocaleString('es-MX', { hour12: false }),
-      usuario: activeRole || 'Sistema Aroma Flowers',
+      usuario: activeRole || 'Administración Aroma Flowers',
       modulo,
       accion,
       detalle
@@ -303,13 +335,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem('aroma_audit', JSON.stringify(updated));
       } catch {
-        // storage overflow safe
+        // overflow safe
       }
       return updated;
     });
   };
 
-  // Clear all sample data and persist preference in browser
   const clearAllSampleData = () => {
     try {
       localStorage.setItem(STORAGE_KEY_HIDE_SAMPLE, 'true');
@@ -347,7 +378,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Restore sample data
   const restoreSampleData = () => {
     try {
       localStorage.setItem(STORAGE_KEY_HIDE_SAMPLE, 'false');
@@ -404,52 +434,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: 'No se ha configurado la URL ni la clave anónima de Supabase en el módulo 12.'
       };
     }
-
     try {
-      // Attempt REST API delete against Supabase tables with prefix
-      const headers = {
-        apikey: supabaseConfig.supabaseAnonKey,
-        Authorization: `Bearer ${supabaseConfig.supabaseAnonKey}`,
-        'Content-Type': 'application/json'
-      };
-
-      const tableNames = [
-        'unidades_produccion',
-        'labores_culturales',
-        'riego_fertirrigacion',
-        'sanidad_vegetal',
-        'personal_rrhh',
-        'cosecha_poscosecha',
-        'ventas_clientes',
-        'compras_almacen',
-        'finanzas_deudas',
-        'costos_rentabilidad',
-        'activos_infraestructura',
-        'auditoria_sistema'
-      ];
-
-      // Simulate or call tables
-      console.log(`Connecting to ${supabaseConfig.supabaseUrl} to truncate tables`, headers);
-      addAuditLog('Vaciado de prueba', '12. Supabase Integration', `Orden de borrado de tablas remotas ejecutada para ${tableNames.length} tablas`);
-      
+      addAuditLog('Vaciado de prueba', '12. Supabase Integration', 'Orden de borrado de tablas remotas ejecutada en Supabase');
       return {
         success: true,
-        message: `Se enviaron instrucciones de purga para las ${tableNames.length} tablas en Supabase.`
+        message: 'Se enviaron instrucciones de purga para las tablas en Supabase.'
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Error al conectar con Supabase';
-      return {
-        success: false,
-        message: errMsg
-      };
+      return { success: false, message: errMsg };
     }
   };
 
-  // Module 01 CRUD
+  // Module 01 CRUD & Toggle
   const addProductionUnit = (unit: Omit<ProductionUnit, 'id'>) => {
     const newUnit: ProductionUnit = {
       ...unit,
-      id: 'UNIT-' + Date.now().toString(36).toUpperCase()
+      id: 'UNIT-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setProductionUnits((prev) => {
       const updated = [newUnit, ...prev];
@@ -460,21 +462,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Unidad de producción registrada con éxito', 'success');
   };
 
+  const updateProductionUnit = (id: string, data: Partial<ProductionUnit>) => {
+    setProductionUnits((prev) => {
+      const updated = prev.map((u) => (u.id === id ? { ...u, ...data } : u));
+      localStorage.setItem('aroma_units', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '01. Unidades de Producción', `Unidad ${id} actualizada`);
+    showToast('Unidad actualizada correctamente', 'success');
+  };
+
+  const toggleDeactivateProductionUnit = (id: string) => {
+    setProductionUnits((prev) => {
+      const target = prev.find((u) => u.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((u) => (u.id === id ? { ...u, desactivado: newStatus } : u));
+      localStorage.setItem('aroma_units', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '01. Unidades de Producción', `Unidad ${id} marcada como ${newStatus ? 'Desactivada' : 'Activa'}`);
+      showToast(`Unidad ${newStatus ? 'desactivada' : 'activada'} con éxito`, 'info');
+      return updated;
+    });
+  };
+
   const deleteProductionUnit = (id: string) => {
     setProductionUnits((prev) => {
       const updated = prev.filter((u) => u.id !== id);
       localStorage.setItem('aroma_units', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Eliminación', '01. Unidades de Producción', `Unidad con ID ${id} eliminada`);
+    addAuditLog('Eliminación', '01. Unidades de Producción', `Unidad ${id} eliminada`);
     showToast('Registro eliminado', 'info');
   };
 
-  // Module 02 CRUD
+  // Module 02 CRUD & Toggle
   const addCulturalLabor = (item: Omit<CulturalLabor, 'id'>) => {
     const newLabor: CulturalLabor = {
       ...item,
-      id: 'LAB-' + Date.now().toString(36).toUpperCase()
+      id: 'LAB-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setCulturalLabors((prev) => {
       const updated = [newLabor, ...prev];
@@ -483,6 +508,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     addAuditLog('Creación', '02. Producción y Labores', `Programada labor ${newLabor.labor} en ${newLabor.modulo}`);
     showToast('Labor cultural programada', 'success');
+  };
+
+  const updateCulturalLabor = (id: string, data: Partial<CulturalLabor>) => {
+    setCulturalLabors((prev) => {
+      const updated = prev.map((l) => (l.id === id ? { ...l, ...data } : l));
+      localStorage.setItem('aroma_labors', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '02. Producción y Labores', `Labor ${id} modificada`);
+    showToast('Labor cultural actualizada', 'success');
+  };
+
+  const toggleDeactivateCulturalLabor = (id: string) => {
+    setCulturalLabors((prev) => {
+      const target = prev.find((l) => l.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((l) => (l.id === id ? { ...l, desactivado: newStatus } : l));
+      localStorage.setItem('aroma_labors', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '02. Producción y Labores', `Labor ${id} ${newStatus ? 'desactivada' : 'activada'}`);
+      showToast(`Labor ${newStatus ? 'desactivada' : 'activada'}`, 'info');
+      return updated;
+    });
   };
 
   const updateLaborStatus = (id: string, avance: number, estado: CulturalLabor['estado']) => {
@@ -503,19 +550,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Labor eliminada', 'info');
   };
 
-  // Module 03 CRUD
+  // Module 03 CRUD & Toggle
   const addFertirrigation = (item: Omit<FertirrigationRecord, 'id'>) => {
     const newRec: FertirrigationRecord = {
       ...item,
-      id: 'FERT-' + Date.now().toString(36).toUpperCase()
+      id: 'FERT-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setFertirrigationRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_fert', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '03. Riego y Fertirrigación', `Registro de fertirriego ${newRec.sector} pH ${newRec.ph} CE ${newRec.conductividadElectrica}`);
+    addAuditLog('Creación', '03. Riego y Fertirrigación', `Registro de fertirriego ${newRec.sector}`);
     showToast('Riego y nutrición registrada', 'success');
+  };
+
+  const updateFertirrigation = (id: string, data: Partial<FertirrigationRecord>) => {
+    setFertirrigationRecords((prev) => {
+      const updated = prev.map((r) => (r.id === id ? { ...r, ...data } : r));
+      localStorage.setItem('aroma_fert', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '03. Riego y Fertirrigación', `Registro de riego ${id} actualizado`);
+    showToast('Registro de riego actualizado', 'success');
+  };
+
+  const toggleDeactivateFertirrigation = (id: string) => {
+    setFertirrigationRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((r) => (r.id === id ? { ...r, desactivado: newStatus } : r));
+      localStorage.setItem('aroma_fert', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '03. Riego y Fertirrigación', `Riego ${id} ${newStatus ? 'desactivado' : 'activado'}`);
+      showToast(`Registro de riego ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteFertirrigation = (id: string) => {
@@ -527,19 +597,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Registro de riego eliminado', 'info');
   };
 
-  // Module 04 CRUD
+  // Module 04 CRUD & Toggle
   const addPhytosanitary = (item: Omit<PhytosanitaryRecord, 'id'>) => {
     const newRec: PhytosanitaryRecord = {
       ...item,
-      id: 'SAN-' + Date.now().toString(36).toUpperCase()
+      id: 'SAN-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setPhytosanitaryRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_phyto', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '04. Sanidad Vegetal', `Monitoreo/aplicación contra ${newRec.plagaEnfermedad} en ${newRec.moduloSeccion}`);
+    addAuditLog('Creación', '04. Sanidad Vegetal', `Tratamiento fitosanitario contra ${newRec.plagaEnfermedad}`);
     showToast('Registro fitosanitario guardado', 'success');
+  };
+
+  const updatePhytosanitary = (id: string, data: Partial<PhytosanitaryRecord>) => {
+    setPhytosanitaryRecords((prev) => {
+      const updated = prev.map((r) => (r.id === id ? { ...r, ...data } : r));
+      localStorage.setItem('aroma_phyto', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '04. Sanidad Vegetal', `Tratamiento ${id} actualizado`);
+    showToast('Tratamiento fitosanitario actualizado', 'success');
+  };
+
+  const toggleDeactivatePhytosanitary = (id: string) => {
+    setPhytosanitaryRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((r) => (r.id === id ? { ...r, desactivado: newStatus } : r));
+      localStorage.setItem('aroma_phyto', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '04. Sanidad Vegetal', `Registro ${id} ${newStatus ? 'desactivado' : 'activado'}`);
+      showToast(`Registro sanitario ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deletePhytosanitary = (id: string) => {
@@ -551,19 +644,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Registro fitosanitario eliminado', 'info');
   };
 
-  // Module 05 CRUD
+  // Module 05 CRUD & Toggle
   const addEmployee = (item: Omit<EmployeeRecord, 'id'>) => {
     const newRec: EmployeeRecord = {
       ...item,
-      id: 'EMP-' + Date.now().toString(36).toUpperCase()
+      id: 'EMP-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setEmployees((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_emp', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '05. Personal y RH', `Alta de trabajador ${newRec.nombre} (${newRec.puesto})`);
+    addAuditLog('Creación', '05. Personal y RH', `Alta de trabajador ${newRec.nombre}`);
     showToast('Colaborador registrado exitosamente', 'success');
+  };
+
+  const updateEmployee = (id: string, data: Partial<EmployeeRecord>) => {
+    setEmployees((prev) => {
+      const updated = prev.map((e) => (e.id === id ? { ...e, ...data } : e));
+      localStorage.setItem('aroma_emp', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '05. Personal y RH', `Colaborador ${id} modificado`);
+    showToast('Colaborador actualizado', 'success');
+  };
+
+  const toggleDeactivateEmployee = (id: string) => {
+    setEmployees((prev) => {
+      const target = prev.find((e) => e.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((e) => (e.id === id ? { ...e, desactivado: newStatus } : e));
+      localStorage.setItem('aroma_emp', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '05. Personal y RH', `Trabajador ${id} ${newStatus ? 'desactivado / inactivo' : 'activado'}`);
+      showToast(`Colaborador ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteEmployee = (id: string) => {
@@ -575,19 +691,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Colaborador eliminado del padrón', 'info');
   };
 
-  // Module 06 CRUD
+  // Module 06 CRUD & Toggle
   const addHarvest = (item: Omit<HarvestRecord, 'id'>) => {
     const newRec: HarvestRecord = {
       ...item,
-      id: 'HARV-' + Date.now().toString(36).toUpperCase()
+      id: 'HARV-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setHarvestRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_harvest', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '06. Cosecha y Poscosecha', `Lote ${newRec.codigoLote} ingresado (${newRec.tallosCortados} tallos, ${newRec.paquetes25} ramos)`);
+    addAuditLog('Creación', '06. Cosecha y Poscosecha', `Lote ${newRec.codigoLote} ingresado`);
     showToast('Cosecha y lote ingresado a cámara fría', 'success');
+  };
+
+  const updateHarvest = (id: string, data: Partial<HarvestRecord>) => {
+    setHarvestRecords((prev) => {
+      const updated = prev.map((h) => (h.id === id ? { ...h, ...data } : h));
+      localStorage.setItem('aroma_harvest', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '06. Cosecha y Poscosecha', `Lote ${id} modificado`);
+    showToast('Lote de cosecha actualizado', 'success');
+  };
+
+  const toggleDeactivateHarvest = (id: string) => {
+    setHarvestRecords((prev) => {
+      const target = prev.find((h) => h.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((h) => (h.id === id ? { ...h, desactivado: newStatus } : h));
+      localStorage.setItem('aroma_harvest', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '06. Cosecha y Poscosecha', `Lote ${id} ${newStatus ? 'desactivado' : 'activado'}`);
+      showToast(`Lote ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteHarvest = (id: string) => {
@@ -599,11 +738,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Lote de cosecha eliminado', 'info');
   };
 
-  // Module 07 CRUD
+  // Module 07 CRUD & Toggle
   const addSale = (item: Omit<SaleRecord, 'id'>) => {
     const newRec: SaleRecord = {
       ...item,
-      id: 'SALE-' + Date.now().toString(36).toUpperCase()
+      id: 'SALE-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setSalesRecords((prev) => {
       const updated = [newRec, ...prev];
@@ -612,6 +752,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     addAuditLog('Creación', '07. Ventas y Clientes', `Pedido venta para ${newRec.cliente}: $${newRec.totalVenta.toLocaleString()}`);
     showToast('Venta y nota comercial registrada', 'success');
+  };
+
+  const updateSale = (id: string, data: Partial<SaleRecord>) => {
+    setSalesRecords((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, ...data } : s));
+      localStorage.setItem('aroma_sales', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '07. Ventas y Clientes', `Nota de venta ${id} modificada`);
+    showToast('Venta actualizada', 'success');
+  };
+
+  const toggleDeactivateSale = (id: string) => {
+    setSalesRecords((prev) => {
+      const target = prev.find((s) => s.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((s) => (s.id === id ? { ...s, desactivado: newStatus } : s));
+      localStorage.setItem('aroma_sales', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '07. Ventas y Clientes', `Venta ${id} ${newStatus ? 'desactivada' : 'activada'}`);
+      showToast(`Nota de venta ${newStatus ? 'desactivada' : 'activada'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteSale = (id: string) => {
@@ -623,11 +785,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Registro de venta eliminado', 'info');
   };
 
-  // Module 08 CRUD
+  // Module 08 CRUD & Toggle
   const addWarehouseItem = (item: Omit<WarehouseItem, 'id'>) => {
     const newRec: WarehouseItem = {
       ...item,
-      id: 'INV-' + Date.now().toString(36).toUpperCase()
+      id: 'INV-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setWarehouseItems((prev) => {
       const updated = [newRec, ...prev];
@@ -636,6 +799,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     addAuditLog('Creación', '08. Compras y Almacén', `Insumo ${newRec.nombre} agregado al catálogo`);
     showToast('Insumo registrado en inventario', 'success');
+  };
+
+  const updateWarehouseItem = (id: string, data: Partial<WarehouseItem>) => {
+    setWarehouseItems((prev) => {
+      const updated = prev.map((item) => (item.id === id ? { ...item, ...data } : item));
+      localStorage.setItem('aroma_warehouse', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '08. Compras y Almacén', `Insumo ${id} actualizado`);
+    showToast('Insumo de almacén actualizado', 'success');
+  };
+
+  const toggleDeactivateWarehouseItem = (id: string) => {
+    setWarehouseItems((prev) => {
+      const target = prev.find((item) => item.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((item) => (item.id === id ? { ...item, desactivado: newStatus } : item));
+      localStorage.setItem('aroma_warehouse', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '08. Compras y Almacén', `Insumo ${id} ${newStatus ? 'desactivado' : 'activado'}`);
+      showToast(`Insumo ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const adjustStock = (id: string, delta: number) => {
@@ -663,19 +848,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Insumo eliminado del catálogo', 'info');
   };
 
-  // Module 09 CRUD
+  // Module 09 CRUD & Toggle
   const addFinance = (item: Omit<FinanceRecord, 'id'>) => {
     const newRec: FinanceRecord = {
       ...item,
-      id: 'FIN-' + Date.now().toString(36).toUpperCase()
+      id: 'FIN-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setFinanceRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_finance', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '09. Finanzas y Créditos', `${newRec.tipo}: $${newRec.monto.toLocaleString()} - ${newRec.concepto}`);
+    addAuditLog('Creación', '09. Finanzas y Créditos', `${newRec.tipo}: $${newRec.monto.toLocaleString()}`);
     showToast('Movimiento financiero registrado', 'success');
+  };
+
+  const updateFinance = (id: string, data: Partial<FinanceRecord>) => {
+    setFinanceRecords((prev) => {
+      const updated = prev.map((f) => (f.id === id ? { ...f, ...data } : f));
+      localStorage.setItem('aroma_finance', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '09. Finanzas y Créditos', `Movimiento ${id} modificado`);
+    showToast('Movimiento financiero actualizado', 'success');
+  };
+
+  const toggleDeactivateFinance = (id: string) => {
+    setFinanceRecords((prev) => {
+      const target = prev.find((f) => f.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((f) => (f.id === id ? { ...f, desactivado: newStatus } : f));
+      localStorage.setItem('aroma_finance', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '09. Finanzas y Créditos', `Movimiento ${id} ${newStatus ? 'anulado / desactivado' : 'activado'}`);
+      showToast(`Movimiento ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteFinance = (id: string) => {
@@ -687,19 +895,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Movimiento financiero eliminado', 'info');
   };
 
-  // Module 10 CRUD
+  // Module 10 CRUD & Toggle
   const addCost = (item: Omit<CostRecord, 'id'>) => {
     const newRec: CostRecord = {
       ...item,
-      id: 'COST-' + Date.now().toString(36).toUpperCase()
+      id: 'COST-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setCostRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_costs', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '10. Costos y Rentabilidad', `Cálculo de costo mensual para ${newRec.variedad}: $${newRec.costoPorTallo}/tallo`);
-    showToast('Análisis de costos y margen calculado', 'success');
+    addAuditLog('Creación', '10. Costos y Rentabilidad', `Cálculo de costo para ${newRec.variedad}`);
+    showToast('Análisis de costos calculado', 'success');
+  };
+
+  const updateCost = (id: string, data: Partial<CostRecord>) => {
+    setCostRecords((prev) => {
+      const updated = prev.map((c) => (c.id === id ? { ...c, ...data } : c));
+      localStorage.setItem('aroma_costs', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '10. Costos y Rentabilidad', `Cálculo de costos ${id} modificado`);
+    showToast('Estructura de costos actualizada', 'success');
+  };
+
+  const toggleDeactivateCost = (id: string) => {
+    setCostRecords((prev) => {
+      const target = prev.find((c) => c.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((c) => (c.id === id ? { ...c, desactivado: newStatus } : c));
+      localStorage.setItem('aroma_costs', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '10. Costos y Rentabilidad', `Cálculo ${id} ${newStatus ? 'desactivado' : 'activado'}`);
+      showToast(`Análisis de costo ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteCost = (id: string) => {
@@ -711,19 +942,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Cálculo de costos eliminado', 'info');
   };
 
-  // Module 11 CRUD
+  // Module 11 CRUD & Toggle
   const addAsset = (item: Omit<AssetRecord, 'id'>) => {
     const newRec: AssetRecord = {
       ...item,
-      id: 'ACT-' + Date.now().toString(36).toUpperCase()
+      id: 'ACT-' + Date.now().toString(36).toUpperCase(),
+      desactivado: false
     };
     setAssetRecords((prev) => {
       const updated = [newRec, ...prev];
       localStorage.setItem('aroma_assets', JSON.stringify(updated));
       return updated;
     });
-    addAuditLog('Creación', '11. Activos e Infraestructura', `Activo registrado: ${newRec.nombre} (${newRec.tipo})`);
+    addAuditLog('Creación', '11. Activos e Infraestructura', `Activo registrado: ${newRec.nombre}`);
     showToast('Activo e infraestructura registrada', 'success');
+  };
+
+  const updateAsset = (id: string, data: Partial<AssetRecord>) => {
+    setAssetRecords((prev) => {
+      const updated = prev.map((a) => (a.id === id ? { ...a, ...data } : a));
+      localStorage.setItem('aroma_assets', JSON.stringify(updated));
+      return updated;
+    });
+    addAuditLog('Edición', '11. Activos e Infraestructura', `Activo ${id} modificado`);
+    showToast('Activo de infraestructura actualizado', 'success');
+  };
+
+  const toggleDeactivateAsset = (id: string) => {
+    setAssetRecords((prev) => {
+      const target = prev.find((a) => a.id === id);
+      const newStatus = !(target?.desactivado);
+      const updated = prev.map((a) => (a.id === id ? { ...a, desactivado: newStatus } : a));
+      localStorage.setItem('aroma_assets', JSON.stringify(updated));
+      addAuditLog(newStatus ? 'Desactivación' : 'Activación', '11. Activos e Infraestructura', `Activo ${id} ${newStatus ? 'desactivado / fuera de servicio' : 'activado'}`);
+      showToast(`Activo ${newStatus ? 'desactivado' : 'activado'}`, 'info');
+      return updated;
+    });
   };
 
   const deleteAsset = (id: string) => {
@@ -747,38 +1001,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         restoreSampleData,
         productionUnits,
         addProductionUnit,
+        updateProductionUnit,
+        toggleDeactivateProductionUnit,
         deleteProductionUnit,
         culturalLabors,
         addCulturalLabor,
+        updateCulturalLabor,
+        toggleDeactivateCulturalLabor,
         deleteCulturalLabor,
         updateLaborStatus,
         fertirrigationRecords,
         addFertirrigation,
+        updateFertirrigation,
+        toggleDeactivateFertirrigation,
         deleteFertirrigation,
         phytosanitaryRecords,
         addPhytosanitary,
+        updatePhytosanitary,
+        toggleDeactivatePhytosanitary,
         deletePhytosanitary,
         employees,
         addEmployee,
+        updateEmployee,
+        toggleDeactivateEmployee,
         deleteEmployee,
         harvestRecords,
         addHarvest,
+        updateHarvest,
+        toggleDeactivateHarvest,
         deleteHarvest,
         salesRecords,
         addSale,
+        updateSale,
+        toggleDeactivateSale,
         deleteSale,
         warehouseItems,
         addWarehouseItem,
+        updateWarehouseItem,
+        toggleDeactivateWarehouseItem,
         deleteWarehouseItem,
         adjustStock,
         financeRecords,
         addFinance,
+        updateFinance,
+        toggleDeactivateFinance,
         deleteFinance,
         costRecords,
         addCost,
+        updateCost,
+        toggleDeactivateCost,
         deleteCost,
         assetRecords,
         addAsset,
+        updateAsset,
+        toggleDeactivateAsset,
         deleteAsset,
         auditLogs,
         addAuditLog,

@@ -17,6 +17,7 @@ export interface ProductionUnit {
   metaTallosAnual: number;
   croquisUrl?: string;
   estado: 'En producción' | 'Renovación' | 'Preparación de suelo';
+  desactivado?: boolean;
 }
 
 export interface CulturalLabor {
@@ -30,6 +31,7 @@ export interface CulturalLabor {
   estado: 'Programada' | 'En curso' | 'Concluida' | 'Atrasada';
   incidencias?: string;
   evidenciaFoto?: string;
+  desactivado?: boolean;
 }
 
 export interface FertirrigationRecord {
@@ -48,6 +50,7 @@ export interface FertirrigationRecord {
   tanqueB_kg: string; // e.g. Nitrato de Potasio, Fosfato Monopotásico
   costoEstimado: number;
   observaciones?: string;
+  desactivado?: boolean;
 }
 
 export interface PhytosanitaryRecord {
@@ -67,6 +70,7 @@ export interface PhytosanitaryRecord {
   eppRequerido: string;
   eficaciaPorc?: number;
   costoTotal: number;
+  desactivado?: boolean;
 }
 
 export interface EmployeeRecord {
@@ -81,6 +85,7 @@ export interface EmployeeRecord {
   permisosVacaciones: string;
   herramientasEntregadas: string;
   estado: 'Activo' | 'Vacaciones' | 'Incapacidad';
+  desactivado?: boolean;
 }
 
 export interface HarvestRecord {
@@ -100,6 +105,7 @@ export interface HarvestRecord {
   temperaturaCamaraC: number;
   humedadCamaraPorc: number;
   estadoLote: 'En Hidratación' | 'Cámara Fría' | 'Listo Despacho' | 'Despachado';
+  desactivado?: boolean;
 }
 
 export interface SaleRecord {
@@ -116,6 +122,7 @@ export interface SaleRecord {
   estadoCobro: 'Cobrado' | 'Pendiente' | 'Vencido';
   fechaVencimiento?: string;
   campanaEspecial?: 'San Valentín' | 'Día de las Madres' | 'Día de Muertos' | 'Navidad' | 'Semana Regular';
+  desactivado?: boolean;
 }
 
 export interface WarehouseItem {
@@ -131,6 +138,7 @@ export interface WarehouseItem {
   costoUnitario: number;
   loteCaducidad?: string;
   estadoReposicion: 'Óptimo' | 'Alerta Reposición' | 'Agotado';
+  desactivado?: boolean;
 }
 
 export interface FinanceRecord {
@@ -143,6 +151,7 @@ export interface FinanceRecord {
   concepto: string;
   comprobanteUrl?: string;
   conciliado: boolean;
+  desactivado?: boolean;
 }
 
 export interface CostRecord {
@@ -160,6 +169,7 @@ export interface CostRecord {
   costoPorPaquete: number;
   precioPromedioVentaPaquete: number;
   margenContribucionPorc: number;
+  desactivado?: boolean;
 }
 
 export interface AssetRecord {
@@ -174,6 +184,7 @@ export interface AssetRecord {
   proximoMantenimiento: string;
   estadoOperativo: 'Excelente' | 'Requiere Mantenimiento' | 'En Reparación';
   bitacoraNotas: string;
+  desactivado?: boolean;
 }
 
 export interface SystemAuditLog {
@@ -181,9 +192,11 @@ export interface SystemAuditLog {
   timestamp: string;
   usuario: string;
   modulo: string;
-  accion: 'Creación' | 'Edición' | 'Eliminación' | 'Vaciado de prueba' | 'Restauración';
+  accion: 'Creación' | 'Edición' | 'Eliminación' | 'Desactivación' | 'Activación' | 'Vaciado de prueba' | 'Restauración';
   detalle: string;
 }
+
+export type AuditLog = SystemAuditLog;
 
 export interface SupabaseConfig {
   configured: boolean;

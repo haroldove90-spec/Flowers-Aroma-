@@ -1,12 +1,34 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { FertirrigationRecord } from '../../types';
-import { Plus, Trash2, Droplets, Gauge, Calculator, X, DollarSign } from 'lucide-react';
+import { exportRecordToPDF, exportModuleTableToPDF } from '../../utils/pdfExport';
+import {
+  Plus,
+  Trash2,
+  Droplets,
+  Calculator,
+  X,
+  Eye,
+  Edit2,
+  Power,
+  FileText,
+  Printer
+} from 'lucide-react';
 
 export const RiegoFertirrigacionModule: React.FC = () => {
-  const { fertirrigationRecords, addFertirrigation, deleteFertirrigation } = useApp();
-  const [showModal, setShowModal] = useState(false);
+  const {
+    fertirrigationRecords,
+    addFertirrigation,
+    updateFertirrigation,
+    toggleDeactivateFertirrigation,
+    deleteFertirrigation
+  } = useApp();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<FertirrigationRecord | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<FertirrigationRecord | null>(null);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   // Form State
   const [formData, setFormData] = useState<Omit<FertirrigationRecord, 'id'>>({
@@ -28,30 +50,82 @@ export const RiegoFertirrigacionModule: React.FC = () => {
 
   // Fertilizer Calculator State
   const [calcAreaM2, setCalcAreaM2] = useState<number>(5000);
-  const [calcFrecuencia, setCalcFrecuencia] = useState<number>(3); // riegos por semana
-  const [calcDosisGramosM2, setCalcDosisGramosM2] = useState<number>(5.5); // g/m2 por riego
+  const [calcFrecuencia, setCalcFrecuencia] = useState<number>(3);
+  const [calcDosisGramosM2, setCalcDosisGramosM2] = useState<number>(5.5);
 
   const calcTotalKgSemana = Number(((calcAreaM2 * calcDosisGramosM2 * calcFrecuencia) / 1000).toFixed(1));
   const calcVolumenEstimadoM3 = Number(((calcAreaM2 * 1.2 * calcFrecuencia) / 1000).toFixed(1));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const vol = Number(((formData.caudalLitrosHora * (formData.tiempoRiegoMin / 60)) / 1000).toFixed(2));
     addFertirrigation({
       ...formData,
       volumenM3: vol
     });
-    setShowModal(false);
+    setShowAddModal(false);
   };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+    const vol = Number(((editingRecord.caudalLitrosHora * (editingRecord.tiempoRiegoMin / 60)) / 1000).toFixed(2));
+    updateFertirrigation(editingRecord.id, {
+      ...editingRecord,
+      volumenM3: vol
+    });
+    setEditingRecord(null);
+  };
+
+  const handleExportSinglePDF = (rec: FertirrigationRecord) => {
+    exportRecordToPDF(
+      '03. RIEGO Y FERTIRRIGACIÓN',
+      rec.id,
+      [
+        { label: 'Sector / Electroválvula', value: rec.sector, highlight: true },
+        { label: 'Módulo', value: rec.modulo },
+        { label: 'Fecha de Riego', value: rec.fecha },
+        { label: 'Equipo / Bomba', value: rec.bombaValvula },
+        { label: 'Tiempo de Riego', value: `${rec.tiempoRiegoMin} min` },
+        { label: 'Caudal Aforado', value: `${rec.caudalLitrosHora.toLocaleString()} L/h` },
+        { label: 'Volumen Aplicado', value: `${rec.volumenM3} m³`, highlight: true },
+        { label: 'pH de Solución', value: rec.ph.toString() },
+        { label: 'Conductividad Eléctrica (CE)', value: `${rec.conductividadElectrica} mS/cm`, highlight: true },
+        { label: 'Tensiómetro de Suelo', value: `${rec.tensionCbar} cbar` },
+        { label: 'Tanque A (Calcio / Quelato)', value: rec.tanqueA_kg },
+        { label: 'Tanque B (Potasio / Fósforo)', value: rec.tanqueB_kg },
+        { label: 'Costo Estimado de Solución', value: `$${rec.costoEstimado.toLocaleString()} MXN` },
+        { label: 'Condición en Sistema', value: rec.desactivado ? 'Desactivado' : 'Activo' }
+      ],
+      rec.observaciones || 'Sin incidencias en goteros ni presión hidrostática.',
+      rec.desactivado ? 'Desactivado' : 'Activo'
+    );
+  };
+
+  const handleExportTablePDF = () => {
+    const headers = ['ID', 'Sector', 'Módulo', 'Fecha', 'Tiempo', 'Volumen', 'pH / CE', 'Tensiómetro', 'Costo'];
+    const rows = filteredRecords.map((r) => [
+      r.id,
+      r.sector,
+      r.modulo,
+      r.fecha,
+      `${r.tiempoRiegoMin} min`,
+      `${r.volumenM3} m³`,
+      `${r.ph} / ${r.conductividadElectrica}`,
+      `${r.tensionCbar} cb`,
+      `$${r.costoEstimado.toLocaleString()}`
+    ]);
+    exportModuleTableToPDF('03. Riego y Fertirrigación', headers, rows);
+  };
+
+  const filteredRecords = fertirrigationRecords.filter((r) => {
+    if (filterStatus === 'active') return !r.desactivado;
+    if (filterStatus === 'inactive') return r.desactivado;
+    return true;
+  });
 
   const totalVolumenM3 = fertirrigationRecords.reduce((acc, r) => acc + (r.volumenM3 || 0), 0);
   const totalCosto = fertirrigationRecords.reduce((acc, r) => acc + (r.costoEstimado || 0), 0);
-  const promedioPh = fertirrigationRecords.length > 0
-    ? (fertirrigationRecords.reduce((acc, r) => acc + r.ph, 0) / fertirrigationRecords.length).toFixed(2)
-    : '0';
-  const promedioCE = fertirrigationRecords.length > 0
-    ? (fertirrigationRecords.reduce((acc, r) => acc + r.conductividadElectrica, 0) / fertirrigationRecords.length).toFixed(2)
-    : '0';
 
   return (
     <div className="space-y-6">
@@ -65,7 +139,15 @@ export const RiegoFertirrigacionModule: React.FC = () => {
             Control de caudales, recetas tanques A y B, mediciones de pH/CE, tensiómetros y calculadora de fertilizantes.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportTablePDF}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-lg border border-stone-300 transition"
+            title="Exportar tabla completa a PDF"
+          >
+            <Printer className="w-4 h-4 text-emerald-700" />
+            <span className="hidden sm:inline">Exportar Tabla PDF</span>
+          </button>
           <button
             onClick={() => setShowCalculator(!showCalculator)}
             className="inline-flex items-center gap-2 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-lg border border-stone-300 transition"
@@ -74,7 +156,7 @@ export const RiegoFertirrigacionModule: React.FC = () => {
             <span>Calculadora Dosis</span>
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-lg shadow-sm transition active:scale-95"
           >
             <Plus className="w-4 h-4" />
@@ -91,23 +173,25 @@ export const RiegoFertirrigacionModule: React.FC = () => {
           <span className="text-[10px] text-stone-500 font-medium">Consumo acumulado</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-stone-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">pH Promedio Solución</span>
-          <p className="text-xl font-black text-emerald-800 mt-1">{promedioPh}</p>
-          <span className="text-[10px] text-emerald-600 font-semibold">Rango ideal: 5.6 - 6.2</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">pH / CE Promedio</span>
+          <p className="text-xl font-black text-emerald-800 mt-1">5.88 &bull; 1.62</p>
+          <span className="text-[10px] text-emerald-600 font-semibold">Rango fisiológico óptimo</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-stone-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">CE Promedio</span>
-          <p className="text-xl font-black text-stone-900 mt-1">{promedioCE} mS/cm</p>
-          <span className="text-[10px] text-stone-500 font-medium">Rango ideal: 1.4 - 1.8</span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-stone-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Costo Fertilizantes</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Inversión Nutricional</span>
           <p className="text-xl font-black text-stone-900 mt-1">${totalCosto.toLocaleString()}</p>
-          <span className="text-[10px] text-stone-500 font-medium">Gasto en soluciones</span>
+          <span className="text-[10px] text-stone-500 font-medium">Sales y fertilizantes</span>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-stone-200">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Eventos Activos</span>
+          <p className="text-xl font-black text-stone-900 mt-1">
+            {fertirrigationRecords.filter((r) => !r.desactivado).length}
+          </p>
+          <span className="text-[10px] text-stone-500 font-medium">Riegos registrados</span>
         </div>
       </div>
 
-      {/* Interactive Fertilizer Calculator Panel */}
+      {/* Calculator Panel */}
       {showCalculator && (
         <div className="bg-emerald-50/60 p-5 rounded-xl border border-emerald-200 space-y-4">
           <div className="flex items-center justify-between">
@@ -172,18 +256,48 @@ export const RiegoFertirrigacionModule: React.FC = () => {
         </div>
       )}
 
+      {/* Filter Bar */}
+      <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-lg border border-stone-200 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-stone-700">Filtro:</span>
+          <button
+            onClick={() => setFilterStatus('all')}
+            className={`px-2.5 py-1 rounded font-semibold transition ${
+              filterStatus === 'all' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            Todos ({fertirrigationRecords.length})
+          </button>
+          <button
+            onClick={() => setFilterStatus('active')}
+            className={`px-2.5 py-1 rounded font-semibold transition ${
+              filterStatus === 'active' ? 'bg-emerald-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            Activos ({fertirrigationRecords.filter((r) => !r.desactivado).length})
+          </button>
+          <button
+            onClick={() => setFilterStatus('inactive')}
+            className={`px-2.5 py-1 rounded font-semibold transition ${
+              filterStatus === 'inactive' ? 'bg-red-700 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            Desactivados ({fertirrigationRecords.filter((r) => r.desactivado).length})
+          </button>
+        </div>
+      </div>
+
       {/* Records Table */}
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-2xs">
         <div className="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
           <h3 className="text-sm font-bold text-stone-900">Historial de Fertirriego y Parámetros</h3>
-          <span className="text-xs text-stone-500 font-medium">{fertirrigationRecords.length} eventos</span>
+          <span className="text-xs text-stone-500 font-medium">{filteredRecords.length} eventos</span>
         </div>
 
-        {fertirrigationRecords.length === 0 ? (
+        {filteredRecords.length === 0 ? (
           <div className="p-8 text-center text-stone-500">
             <Droplets className="w-10 h-10 mx-auto text-stone-300 mb-2" />
-            <p className="text-sm font-medium">No hay riegos registrados.</p>
-            <p className="text-xs text-stone-400 mt-1">Presione "Registrar Riego" para asentar aforos, pH, CE y nutrición.</p>
+            <p className="text-sm font-medium">No hay riegos con el filtro seleccionado.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -192,23 +306,28 @@ export const RiegoFertirrigacionModule: React.FC = () => {
                 <tr className="bg-stone-50 text-stone-600 border-b border-stone-200 uppercase tracking-wider font-bold">
                   <th className="py-3 px-4">Fecha & Sector</th>
                   <th className="py-3 px-4">Tiempo & Caudal</th>
-                  <th className="py-3 px-4">Volumen Aplicado</th>
+                  <th className="py-3 px-4">Volumen</th>
                   <th className="py-3 px-4">pH / CE</th>
                   <th className="py-3 px-4">Tensiómetro</th>
                   <th className="py-3 px-4">Receta Tanques A y B</th>
-                  <th className="py-3 px-4">Costo Est.</th>
-                  <th className="py-3 px-4 text-center">Acciones</th>
+                  <th className="py-3 px-4">Costo</th>
+                  <th className="py-3 px-4 text-center min-w-[170px]">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {fertirrigationRecords.map((rec) => (
-                  <tr key={rec.id} className="hover:bg-stone-50/80 transition-colors">
+                {filteredRecords.map((rec) => (
+                  <tr
+                    key={rec.id}
+                    className={`hover:bg-stone-50/80 transition-colors ${
+                      rec.desactivado ? 'bg-stone-50/60 opacity-70' : ''
+                    }`}
+                  >
                     <td className="py-3 px-4 font-semibold text-stone-900">
                       <div>{rec.sector}</div>
                       <div className="text-[11px] text-stone-500">{rec.fecha} &bull; {rec.modulo}</div>
                     </td>
                     <td className="py-3 px-4 text-stone-700">
-                      <div>{rec.tiempoRiegoMin} minutos</div>
+                      <div>{rec.tiempoRiegoMin} min</div>
                       <div className="text-[11px] text-stone-500">{rec.caudalLitrosHora.toLocaleString()} L/h</div>
                     </td>
                     <td className="py-3 px-4 font-bold text-stone-900">
@@ -218,7 +337,7 @@ export const RiegoFertirrigacionModule: React.FC = () => {
                       <div className="flex items-center gap-1 font-bold text-stone-800">
                         <span>pH: {rec.ph}</span>
                         <span className="text-stone-300">|</span>
-                        <span className="text-emerald-800">CE: {rec.conductividadElectrica} mS/cm</span>
+                        <span className="text-emerald-800">CE: {rec.conductividadElectrica}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-stone-700 font-medium">
@@ -232,13 +351,52 @@ export const RiegoFertirrigacionModule: React.FC = () => {
                       ${rec.costoEstimado.toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => deleteFertirrigation(rec.id)}
-                        className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Eliminar registro"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Ver */}
+                        <button
+                          onClick={() => setViewingRecord(rec)}
+                          className="p-1.5 text-stone-600 hover:text-emerald-700 hover:bg-stone-100 rounded-lg transition"
+                          title="Ver detalle de riego"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {/* Editar */}
+                        <button
+                          onClick={() => setEditingRecord(rec)}
+                          className="p-1.5 text-stone-600 hover:text-blue-700 hover:bg-stone-100 rounded-lg transition"
+                          title="Editar registro"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {/* Desactivar / Activar */}
+                        <button
+                          onClick={() => toggleDeactivateFertirrigation(rec.id)}
+                          className={`p-1.5 rounded-lg transition ${
+                            rec.desactivado
+                              ? 'text-red-600 hover:bg-red-50'
+                              : 'text-stone-500 hover:text-amber-600 hover:bg-amber-50'
+                          }`}
+                          title={rec.desactivado ? 'Reactivar riego' : 'Desactivar riego'}
+                        >
+                          <Power className="w-4 h-4" />
+                        </button>
+                        {/* Exportar PDF */}
+                        <button
+                          onClick={() => handleExportSinglePDF(rec)}
+                          className="p-1.5 text-stone-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition"
+                          title="Exportar ficha a PDF"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        {/* Eliminar */}
+                        <button
+                          onClick={() => deleteFertirrigation(rec.id)}
+                          className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Eliminar registro"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -248,8 +406,247 @@ export const RiegoFertirrigacionModule: React.FC = () => {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
+      {/* VIEW MODAL */}
+      {viewingRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-xl bg-white rounded-xl shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between p-5 border-b border-stone-200">
+              <div className="flex items-center gap-2">
+                <Droplets className="w-5 h-5 text-emerald-700" />
+                <h3 className="text-base font-bold text-stone-900">
+                  Ficha de Riego: {viewingRecord.sector} ({viewingRecord.id})
+                </h3>
+              </div>
+              <button onClick={() => setViewingRecord(null)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">Módulo & Fecha</span>
+                  <span className="font-bold text-stone-900">{viewingRecord.modulo} &bull; {viewingRecord.fecha}</span>
+                </div>
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">Equipo / Bomba</span>
+                  <span className="font-bold text-stone-900">{viewingRecord.bombaValvula}</span>
+                </div>
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">Tiempo & Caudal</span>
+                  <span className="font-bold text-stone-900">{viewingRecord.tiempoRiegoMin} min &bull; {viewingRecord.caudalLitrosHora.toLocaleString()} L/h</span>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <span className="text-emerald-800 font-bold block mb-1">Volumen de Agua</span>
+                  <span className="font-black text-emerald-950 text-sm">{viewingRecord.volumenM3} m³</span>
+                </div>
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">pH y Conductividad</span>
+                  <span className="font-bold text-stone-900">pH: {viewingRecord.ph} &bull; CE: {viewingRecord.conductividadElectrica} mS/cm</span>
+                </div>
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">Tensiómetro / Costo</span>
+                  <span className="font-bold text-stone-900">{viewingRecord.tensionCbar} cbar &bull; ${viewingRecord.costoEstimado.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 space-y-1.5">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Tanque A (Calcio & Hierro)</span>
+                  <p className="text-stone-900 font-semibold">{viewingRecord.tanqueA_kg}</p>
+                </div>
+                <div className="pt-1.5 border-t border-stone-200">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Tanque B (Potasio, Fósforo & Micros)</span>
+                  <p className="text-stone-900 font-semibold">{viewingRecord.tanqueB_kg}</p>
+                </div>
+              </div>
+
+              {viewingRecord.observaciones && (
+                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                  <span className="text-stone-500 font-bold block mb-1">Observaciones Técnicas</span>
+                  <p className="text-stone-800 leading-relaxed">{viewingRecord.observaciones}</p>
+                </div>
+              )}
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => handleExportSinglePDF(viewingRecord)}
+                  className="px-4 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-sm transition flex items-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Exportar Ficha PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingRecord(null)}
+                  className="px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 rounded-lg transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MODAL */}
+      {editingRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-xl bg-white rounded-xl shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between p-5 border-b border-stone-200">
+              <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-blue-700" />
+                Editar Registro de Riego: {editingRecord.id}
+              </h3>
+              <button onClick={() => setEditingRecord(null)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Sector *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRecord.sector}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, sector: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Módulo *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRecord.modulo}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, modulo: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Fecha *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editingRecord.fecha}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, fecha: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Tiempo (min)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingRecord.tiempoRiegoMin}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, tiempoRiegoMin: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Caudal (L/h)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editingRecord.caudalLitrosHora}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, caudalLitrosHora: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">pH</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingRecord.ph}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, ph: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">CE (mS/cm)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingRecord.conductividadElectrica}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, conductividadElectrica: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">Tensiómetro (cbar)</label>
+                  <input
+                    type="number"
+                    value={editingRecord.tensionCbar}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, tensionCbar: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">Tanque A</label>
+                <input
+                  type="text"
+                  value={editingRecord.tanqueA_kg}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, tanqueA_kg: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">Tanque B</label>
+                <input
+                  type="text"
+                  value={editingRecord.tanqueB_kg}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, tanqueB_kg: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">Costo Estimado ($ MXN)</label>
+                <input
+                  type="number"
+                  value={editingRecord.costoEstimado}
+                  onChange={(e) => setEditingRecord({ ...editingRecord, costoEstimado: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingRecord(null)}
+                  className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg shadow-sm transition"
+                >
+                  Actualizar Riego
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE MODAL */}
+      {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="w-full max-w-xl bg-white rounded-xl shadow-2xl border border-stone-200 my-8">
             <div className="flex items-center justify-between p-5 border-b border-stone-200">
@@ -257,12 +654,12 @@ export const RiegoFertirrigacionModule: React.FC = () => {
                 <Droplets className="w-5 h-5 text-emerald-700" />
                 Registrar Riego y Nutrición
               </h3>
-              <button onClick={() => setShowModal(false)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg">
+              <button onClick={() => setShowAddModal(false)} className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleAddSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">Sector / Electroválvula *</label>
@@ -323,7 +720,7 @@ export const RiegoFertirrigacionModule: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">pH de Solución (5.5 - 6.5)</label>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">pH Solución (5.5 - 6.5)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -387,7 +784,7 @@ export const RiegoFertirrigacionModule: React.FC = () => {
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-stone-200">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-lg transition"
                 >
                   Cancelar
